@@ -1,0 +1,6 @@
+qdrant-client
+python-dotenv
+sentence-transformers
+transformers
+llama-index-core
+llama-index-embeddings-huggingface
