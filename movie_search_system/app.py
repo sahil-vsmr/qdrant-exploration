@@ -204,7 +204,7 @@ print(f"Uploaded {idx} vectors")
 
 # Run a Semantic Search Query
 
-def search_and_print(query, vector_name, k=3):
+def search_and_inspect(query, vector_name, k=3):
     results = client.query_points(
         collection_name=collection_name,
         query=encoder.encode(query).tolist(),
@@ -213,8 +213,60 @@ def search_and_print(query, vector_name, k=3):
     )
 
     print(f"\nTop {k} results using '{vector_name}' chunks for query: '{query}'")
-    for point in results.points:
-        print(point.payload['name'], "| score:", point.score)
+    for i, point in enumerate(results.points, 1):
+        payload = point.payload
+        print(
+            f"{i}. {payload['name']} ({payload['year']})\n"
+            f"   Score: {point.score:.4f}\n"
+            f"   Chunking: {payload['chunking']}\n"
+            f"   Chunk: {payload['chunk']}\n"
+        )
 
-search_and_print("alien invasion", "semantic")
-search_and_print("time travel", "sentence")
+for strategy in ['fixed', 'sentence', 'semantic']:
+    search_and_inspect('alien invasion', strategy)
+
+
+# Apply a filter to search query
+
+hits = client.query_points(
+    collection_name=collection_name,
+    query=encoder.encode("alien invasion").tolist(),
+    using="semantic",  # or whatever named vector you're using
+    query_filter=models.Filter(
+        must=[
+            models.FieldCondition(
+                key="year",
+                range=models.Range(gte=2000)
+            )
+        ]
+    ),
+    limit=4,
+    with_payload=True,
+)
+
+
+for point in hits.points:
+    print(point.payload['name'], "| score:", point.score)
+print()
+# grouping results by title
+
+response = client.query_points_groups(
+    collection_name=collection_name,
+    query=encoder.encode("alien invasion").tolist(),
+    using="semantic",
+    query_filter=models.Filter(
+        must=[
+            models.FieldCondition(
+                key="year",
+                range=models.Range(gte=2000)
+            )
+        ]
+    ),
+    group_by="name",       # group results by the 'name' field
+    limit=4,               # number of unique titles to return
+    group_size=1,          # max points per group
+    with_payload=True,
+)
+
+for group in response.groups:
+    print(group.id, "| score:", group.hits[0].score)

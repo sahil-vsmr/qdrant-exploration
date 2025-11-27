@@ -12,23 +12,25 @@ This script builds an in-memory semantic search playground focused on comparing 
   - **Sentence splitter**: `SentenceSplitter` with configurable overlap to keep adjacent context.
   - **Semantic splitter**: `SemanticSplitterNodeParser` (Hugging Face embeddings + breakpoint percentile) to cut text where semantics change.
 - Iterates over every movie description, runs all three chunkers, encodes each chunk with the shared encoder, and uploads the resulting vectors/payloads to Qdrant.
-- Runs example searches (`"alien invasion"` using semantic chunks, `"time travel"` using sentence chunks) and prints the top matches with similarity scores.
+- Compares chunking strategies by running `search_and_inspect` across all three vector namespaces and prints ranked metadata-rich hits (score, strategy, chunk preview).
+- Demonstrates filtered search (`year >= 2000`) and grouped search (group-by `name`) using Qdrant’s filtering API to show post-processing options for semantic retrieval.
 
 ### Runtime flow
 
 ```mermaid
 flowchart TD
     A[Load movie descriptions] --> B[Count tokens with AutoTokenizer]
-    B --> C{Need chunking?}
-    C -->|Yes| D[Fixed-size chunks]
-    C -->|Yes| E[Sentence splitter chunks]
-    C -->|Yes| F[Semantic splitter chunks]
+    B --> C{Chunk strategy}
+    C --> D[Fixed-size chunks]
+    C --> E[Sentence splitter chunks]
+    C --> F[Semantic splitter chunks]
     D --> G[Encode via SentenceTransformer]
     E --> G
     F --> G
     G --> H[Populate PointStruct payloads]
     H --> I[Upload to Qdrant collection]
-    I --> J[Run sample semantic queries]
+    I --> J[Inspect per-strategy results]
+    J --> K[Filter + group queries]
 ```
 
 ### Key constants
@@ -43,5 +45,5 @@ cd /Users/sahilagarwal/Projects/qdrant-exploration
 python movie_search_system/app.py
 ```
 
-Execution prints token stats, the number of vectors uploaded, and the search hits per chunking strategy, giving a fast way to see how chunk granularity affects retrieval.
+Execution prints token stats, the number of vectors uploaded, per-strategy rankings, and examples of filtered/grouped searches so you can observe how chunking style influences downstream retrieval and filtering behavior.
 
